@@ -1,0 +1,20 @@
+{
+  "novels": [
+    {
+      "id": "novel-01",
+      "title": "全班的妻子",
+      "author": "张灵韵",
+      "description": "这啥鬼啊",
+      "chapters": [
+        { "id": "1", "title": "第一章", "path": "1.txt" },
+        { "id": "2", "title": "第二章", "path": "2.txt" },
+        { "id": "3", "title": "第三章", "path": "3.txt" },
+        { "id": "4", "title": "第四章", "path": "4.txt" },
+        { "id": "5", "title": "第五章", "path": "5.txt" },
+        { "id": "6", "title": "第六章", "path": "6.txt" },
+        { "id": "7", "title": "第七章", "path": "7.txt" },
+        { "id": "8", "title": "尾声", "path": "8.txt" }
+      ]
+    }
+  ]
+}

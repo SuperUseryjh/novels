@@ -9,8 +9,10 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- 引入 Lucide 用于获取图标数据，但不直接自动初始化 -->
+    <!-- 引入 Lucide 用于获取图标数据 -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- 引入 Markdown 解析库 -->
+    <script src="https://unpkg.com/marked/marked.min.js"></script>
     <style>
         .transition-colors { transition: background-color 0.3s, color 0.3s; }
         .line-clamp-3 {
@@ -20,42 +22,48 @@
             overflow: hidden;
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-        /* 解决图标未加载时的占位高度 */
         .icon-placeholder { display: inline-block; width: 1em; height: 1em; vertical-align: middle; }
-        /* 阅读器内文本平滑淡入 */
         .fade-in-content { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        /* Markdown 样式微调 */
+        .prose h1 { font-size: 2em; font-weight: bold; margin-bottom: 1rem; }
+        .prose h2 { font-size: 1.5em; font-weight: bold; margin-top: 1.5rem; margin-bottom: 1rem; }
+        .prose h3 { font-size: 1.25em; font-weight: bold; margin-top: 1.2rem; margin-bottom: 0.8rem; }
+        .prose p { margin-bottom: 1.2rem; }
+        .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .prose blockquote { border-left: 4px solid #e5e7eb; padding-left: 1rem; font-style: italic; color: #6b7280; margin: 1.5rem 0; }
+        .dark .prose blockquote { border-left-color: #374151; color: #9ca3af; }
+        .prose strong { font-weight: bold; }
+        .prose em { font-style: italic; }
+        .prose code { background-color: rgba(0,0,0,0.05); padding: 0.2rem 0.4rem; rounded: 0.25rem; font-family: monospace; }
+        .dark .prose code { background-color: rgba(255,255,255,0.1); }
     </style>
 </head>
 <body class="bg-gray-50">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef, useMemo } = React;
 
         /**
-         * 修复后的 Icon 组件
-         * 使用这种方式可以避免 Lucide 直接操作 React 的 DOM 节点
+         * Icon 组件
          */
         const Icon = ({ name, className = "w-5 h-5" }) => {
             const containerRef = useRef(null);
 
             useEffect(() => {
                 if (window.lucide && containerRef.current) {
-                    // 清空容器，防止重复添加
                     containerRef.current.innerHTML = '';
-                    
-                    // 获取图标对象
                     const iconName = name.charAt(0).toLowerCase() + name.slice(1);
                     const iconData = window.lucide.icons[name] || window.lucide.icons[iconName];
                     
                     if (iconData) {
-                        // 创建 SVG 元素
                         const svg = window.lucide.createElement(iconData);
-                        // 应用类名
                         className.split(' ').forEach(cls => {
                             if(cls) svg.classList.add(cls);
                         });
@@ -82,7 +90,6 @@
                 const fetchConfig = async () => {
                     try {
                         setLoading(true);
-                        // 注意：这里需要确保你的 /article/index.json 能够被访问
                         const response = await fetch('./article/index.json');
                         if (!response.ok) throw new Error('无法读取配置文件，请确认 ./article/index.json 存在。');
                         const data = await response.json();
@@ -103,7 +110,7 @@
                         <div className="p-2 bg-indigo-600 rounded-lg text-white shadow-lg">
                             <Icon name="Library" className="w-8 h-8" />
                         </div>
-                        <h1 className="text-3xl font-extrabold tracking-tight">我的书库</h1>
+                        <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">我的书库</h1>
                     </header>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {config?.novels?.map(novel => (
@@ -119,7 +126,7 @@
                                     }
                                 </div>
                                 <div className="flex-1 overflow-hidden">
-                                    <h2 className="text-xl font-bold mb-1 truncate">{novel.title}</h2>
+                                    <h2 className="text-xl font-bold mb-1 truncate text-gray-900 dark:text-white">{novel.title}</h2>
                                     <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium mb-2">{novel.author}</p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-3">{novel.description}</p>
                                 </div>
@@ -129,7 +136,7 @@
                 </div>
             );
 
-            // 详情/目录视图
+            // 详情视图
             const DetailView = ({ novelId }) => {
                 const novel = config?.novels.find(n => n.id === novelId);
                 if (!novel) return <div className="p-10 text-center">未找到该小说</div>;
@@ -138,7 +145,7 @@
                     <div className="max-w-3xl mx-auto p-6">
                         <button 
                             onClick={() => setCurrentView({ type: 'home', params: {} })}
-                            className="flex items-center gap-1 text-indigo-600 font-medium mb-8 hover:opacity-70"
+                            className="flex items-center gap-1 text-indigo-600 font-medium mb-8 hover:opacity-70 transition-all"
                         >
                             <Icon name="ArrowLeft" className="w-4 h-4" /> 返回列表
                         </button>
@@ -150,7 +157,7 @@
                                 }
                             </div>
                             <div className="flex-1">
-                                <h1 className="text-4xl font-black mb-2 leading-tight">{novel.title}</h1>
+                                <h1 className="text-4xl font-black mb-2 leading-tight text-gray-900 dark:text-white">{novel.title}</h1>
                                 <p className="text-xl text-gray-500 mb-6">作者：{novel.author}</p>
                                 <div className="p-5 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-2xl text-gray-700 dark:text-gray-300 leading-relaxed border border-indigo-100/50 dark:border-indigo-800/30">
                                     {novel.description}
@@ -158,7 +165,7 @@
                             </div>
                         </div>
                         <div className="space-y-4">
-                            <h3 className="text-2xl font-bold flex items-center gap-2 px-2">
+                            <h3 className="text-2xl font-bold flex items-center gap-2 px-2 text-gray-900 dark:text-white">
                                 <Icon name="List" /> 目录
                             </h3>
                             <div className="grid grid-cols-1 gap-2">
@@ -168,7 +175,7 @@
                                         onClick={() => setCurrentView({ type: 'reader', params: { novelId, chapterIndex: index } })}
                                         className="text-left p-4 bg-white dark:bg-gray-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all border border-gray-100 dark:border-gray-700 flex justify-between items-center group"
                                     >
-                                        <span><span className="text-gray-400 mr-3 italic">{index + 1}</span>{chapter.title}</span>
+                                        <span className="text-gray-900 dark:text-gray-100"><span className="text-gray-400 mr-3 italic">{index + 1}</span>{chapter.title}</span>
                                         <Icon name="ChevronRight" className="w-4 h-4 text-gray-300 group-hover:text-indigo-500" />
                                     </button>
                                 ))}
@@ -178,9 +185,9 @@
                 );
             };
 
-            // 阅读器视图
+            // 阅读器视图 (Markdown 渲染)
             const ReaderView = ({ novelId, chapterIndex }) => {
-                const [content, setContent] = useState('');
+                const [rawContent, setRawContent] = useState('');
                 const [loadingContent, setLoadingContent] = useState(true);
                 const novel = config?.novels.find(n => n.id === novelId);
                 const chapter = novel?.chapters[chapterIndex];
@@ -193,16 +200,22 @@
                             const res = await fetch(`./article/${novelId}/${chapter.path}`);
                             if (!res.ok) throw new Error();
                             const txt = await res.text();
-                            setContent(txt);
+                            setRawContent(txt);
                             window.scrollTo(0, 0);
                         } catch {
-                            setContent('加载章节内容失败。路径：./article/' + novelId + '/' + chapter.path);
+                            setRawContent('加载内容失败。路径：./article/' + novelId + '/' + chapter.path);
                         } finally {
                             setLoadingContent(false);
                         }
                     };
                     load();
                 }, [novelId, chapterIndex]);
+
+                // 使用 marked 将 Markdown 转换为 HTML
+                const htmlContent = useMemo(() => {
+                    if (!rawContent) return '';
+                    return window.marked.parse(rawContent);
+                }, [rawContent]);
 
                 if (!novel || !chapter) return null;
 
@@ -232,7 +245,10 @@
                                     {[...Array(8)].map((_, i) => <div key={i} className="h-4 bg-current rounded w-full animate-pulse"></div>)}
                                 </div>
                             ) : (
-                                <div className="whitespace-pre-wrap space-y-6">{content}</div>
+                                <div 
+                                    className="prose dark:prose-invert max-w-none"
+                                    dangerouslySetInnerHTML={{ __html: htmlContent }}
+                                />
                             )}
 
                             <div className="mt-24 flex justify-between gap-4 border-t border-black/5 pt-12 pb-32">
@@ -269,7 +285,7 @@
                     <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
                         <Icon name="AlertTriangle" className="w-8 h-8" />
                     </div>
-                    <h2 className="text-2xl font-bold mb-2">加载失败</h2>
+                    <h2 className="text-2xl font-bold mb-2 dark:text-white">加载失败</h2>
                     <p className="text-gray-500 mb-8 max-w-sm">{error}</p>
                     <button onClick={() => window.location.reload()} className="px-6 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors">
                         重试
@@ -286,7 +302,6 @@
             );
         };
 
-        // 创建根节点并渲染
         const rootElement = document.getElementById('root');
         const root = ReactDOM.createRoot(rootElement);
         root.render(<App />);

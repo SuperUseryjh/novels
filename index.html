@@ -11,8 +11,8 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <!-- 引入 Lucide 用于获取图标数据 -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- 引入 Markdown 解析库 -->
-    <script src="https://unpkg.com/marked/marked.min.js"></script>
+    <!-- 使用更稳定的 CDN 引入 Markdown 解析库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
     <style>
         .transition-colors { transition: background-color 0.3s, color 0.3s; }
         .line-clamp-3 {
@@ -85,6 +85,22 @@
                 fontSize: 18,
                 maxWidth: 800
             });
+
+            // 状态监控 marked 是否加载完成
+            const [isMarkedReady, setIsMarkedReady] = useState(typeof window.marked !== 'undefined');
+
+            useEffect(() => {
+                // 如果 marked 还没加载，启动一个定时检查
+                if (!isMarkedReady) {
+                    const timer = setInterval(() => {
+                        if (typeof window.marked !== 'undefined') {
+                            setIsMarkedReady(true);
+                            clearInterval(timer);
+                        }
+                    }, 500);
+                    return () => clearInterval(timer);
+                }
+            }, [isMarkedReady]);
 
             useEffect(() => {
                 const fetchConfig = async () => {
@@ -203,7 +219,7 @@
                             setRawContent(txt);
                             window.scrollTo(0, 0);
                         } catch {
-                            setRawContent('加载内容失败。路径：./article/' + novelId + '/' + chapter.path);
+                            setRawContent('加载内容失败。请检查文件是否存在于：./article/' + novelId + '/' + chapter.path);
                         } finally {
                             setLoadingContent(false);
                         }
@@ -211,23 +227,28 @@
                     load();
                 }, [novelId, chapterIndex]);
 
-                // 修复逻辑：增加 window.marked 的存在性检查
+                // 核心修复逻辑：确保 marked 已经就绪
                 const htmlContent = useMemo(() => {
                     if (!rawContent) return '';
-                    if (typeof window.marked === 'undefined') {
-                        return '<p>Markdown 解析器加载中...</p>';
+                    
+                    const m = window.marked;
+                    if (typeof m === 'undefined') {
+                        return '<div class="p-8 text-center opacity-50">Markdown 解析器正在连接... 如果长时间显示此内容，请检查网络或刷新。</div>';
                     }
-                    // 兼容不同版本的 marked 导出方式
+
                     try {
-                        if (window.marked.parse) {
-                            return window.marked.parse(rawContent);
+                        // 配置 marked 选项提高兼容性
+                        if (m.setOptions) {
+                            m.setOptions({ gfm: true, breaks: true });
                         }
-                        return window.marked(rawContent);
+                        
+                        if (m.parse) return m.parse(rawContent);
+                        return m(rawContent);
                     } catch (e) {
                         console.error('Markdown parse error:', e);
-                        return rawContent;
+                        return `<pre class="whitespace-pre-wrap">${rawContent}</pre>`;
                     }
-                }, [rawContent]);
+                }, [rawContent, isMarkedReady]);
 
                 if (!novel || !chapter) return null;
 

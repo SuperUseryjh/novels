@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的在线书库</title>
-    <!-- 样式与库的引入 -->
+    <!-- 基础库引入 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- 引入 Lucide 用于获取图标数据，但不直接自动初始化 -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .transition-colors { transition: background-color 0.3s, color 0.3s; }
@@ -19,27 +20,51 @@
             overflow: hidden;
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        /* 解决图标未加载时的占位高度 */
+        .icon-placeholder { display: inline-block; width: 1em; height: 1em; vertical-align: middle; }
+        /* 阅读器内文本平滑淡入 */
+        .fade-in-content { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body class="bg-gray-50">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
-        // 图标组件
+        /**
+         * 修复后的 Icon 组件
+         * 使用这种方式可以避免 Lucide 直接操作 React 的 DOM 节点
+         */
         const Icon = ({ name, className = "w-5 h-5" }) => {
-            const ref = React.useRef(null);
+            const containerRef = useRef(null);
+
             useEffect(() => {
-                if (window.lucide && ref.current) {
-                    window.lucide.createIcons({
-                        attrs: { class: className },
-                        nameAttr: 'data-lucide',
-                        icons: { [name]: window.lucide.icons[name] }
-                    });
+                if (window.lucide && containerRef.current) {
+                    // 清空容器，防止重复添加
+                    containerRef.current.innerHTML = '';
+                    
+                    // 获取图标对象
+                    const iconName = name.charAt(0).toLowerCase() + name.slice(1);
+                    const iconData = window.lucide.icons[name] || window.lucide.icons[iconName];
+                    
+                    if (iconData) {
+                        // 创建 SVG 元素
+                        const svg = window.lucide.createElement(iconData);
+                        // 应用类名
+                        className.split(' ').forEach(cls => {
+                            if(cls) svg.classList.add(cls);
+                        });
+                        containerRef.current.appendChild(svg);
+                    }
                 }
             }, [name, className]);
-            return <i ref={ref} data-lucide={name} className={className}></i>;
+
+            return <span ref={containerRef} className={`inline-flex items-center justify-center ${className} icon-placeholder`}></span>;
         };
 
         const App = () => {
@@ -57,12 +82,13 @@
                 const fetchConfig = async () => {
                     try {
                         setLoading(true);
+                        // 注意：这里需要确保你的 /article/index.json 能够被访问
                         const response = await fetch('./article/index.json');
-                        if (!response.ok) throw new Error('无法获取 ./article/index.json');
+                        if (!response.ok) throw new Error('无法读取配置文件，请确认 ./article/index.json 存在。');
                         const data = await response.json();
                         setConfig(data);
                     } catch (err) {
-                        setError('配置文件加载失败，请检查路径。');
+                        setError(err.message || '配置文件加载失败');
                     } finally {
                         setLoading(false);
                     }
@@ -72,7 +98,7 @@
 
             // 首页视图
             const HomeView = () => (
-                <div className="max-w-4xl mx-auto p-6">
+                <div className="max-w-4xl mx-auto p-6 animate-in fade-in duration-500">
                     <header className="mb-10 flex items-center gap-3">
                         <div className="p-2 bg-indigo-600 rounded-lg text-white shadow-lg">
                             <Icon name="Library" className="w-8 h-8" />
@@ -80,7 +106,7 @@
                         <h1 className="text-3xl font-extrabold tracking-tight">我的书库</h1>
                     </header>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {config?.novels.map(novel => (
+                        {config?.novels?.map(novel => (
                             <div 
                                 key={novel.id}
                                 onClick={() => setCurrentView({ type: 'detail', params: { novelId: novel.id } })}
@@ -109,7 +135,7 @@
                 if (!novel) return <div className="p-10 text-center">未找到该小说</div>;
 
                 return (
-                    <div className="max-w-3xl mx-auto p-6 animate-in fade-in duration-500">
+                    <div className="max-w-3xl mx-auto p-6">
                         <button 
                             onClick={() => setCurrentView({ type: 'home', params: {} })}
                             className="flex items-center gap-1 text-indigo-600 font-medium mb-8 hover:opacity-70"
@@ -120,7 +146,7 @@
                             <div className="w-40 h-56 bg-indigo-50 dark:bg-gray-700 rounded-xl shadow-2xl flex-shrink-0 flex items-center justify-center overflow-hidden border-4 border-white dark:border-gray-800">
                                 {novel.cover ? 
                                     <img src={novel.cover} alt={novel.title} className="w-full h-full object-cover" /> : 
-                                    <Icon name="Book" className="w-16 h-16 text-indigo-300" />
+                                    <Icon name="BookOpen" className="w-16 h-16 text-indigo-300" />
                                 }
                             </div>
                             <div className="flex-1">
@@ -133,7 +159,7 @@
                         </div>
                         <div className="space-y-4">
                             <h3 className="text-2xl font-bold flex items-center gap-2 px-2">
-                                <Icon name="AlignLeft" /> 目录
+                                <Icon name="List" /> 目录
                             </h3>
                             <div className="grid grid-cols-1 gap-2">
                                 {novel.chapters.map((chapter, index) => (
@@ -170,57 +196,57 @@
                             setContent(txt);
                             window.scrollTo(0, 0);
                         } catch {
-                            setContent('无法加载章节文件，请检查文件路径是否正确。');
+                            setContent('加载章节内容失败。路径：./article/' + novelId + '/' + chapter.path);
                         } finally {
                             setLoadingContent(false);
                         }
                     };
                     load();
-                }, [novelId, chapter]);
+                }, [novelId, chapterIndex]);
 
                 if (!novel || !chapter) return null;
 
                 return (
                     <div className={`min-h-screen transition-colors ${settings.darkMode ? 'bg-zinc-900 text-zinc-300' : 'bg-orange-50/50 text-gray-900'}`}>
-                        <div className="sticky top-0 z-10 bg-inherit border-b border-black/5 p-4 backdrop-blur-md bg-opacity-80">
+                        <div className="sticky top-0 z-10 bg-inherit border-b border-black/5 p-4 backdrop-blur-md bg-opacity-90">
                             <div className="max-w-4xl mx-auto flex justify-between items-center">
-                                <button onClick={() => setCurrentView({ type: 'detail', params: { novelId } })} className="p-2 hover:bg-black/5 rounded-full">
+                                <button onClick={() => setCurrentView({ type: 'detail', params: { novelId } })} className="p-2 hover:bg-black/10 rounded-full transition-colors">
                                     <Icon name="X" />
                                 </button>
-                                <div className="text-sm font-bold opacity-60 truncate px-4">{novel.title}</div>
-                                <div className="flex gap-2">
-                                    <button onClick={() => setSettings(s => ({ ...s, darkMode: !s.darkMode }))} className="p-2 hover:bg-black/5 rounded-full">
+                                <div className="text-xs font-bold opacity-50 truncate px-4 uppercase tracking-widest">{novel.title}</div>
+                                <div className="flex gap-1">
+                                    <button onClick={() => setSettings(s => ({ ...s, darkMode: !s.darkMode }))} className="p-2 hover:bg-black/10 rounded-full transition-colors">
                                         <Icon name={settings.darkMode ? "Sun" : "Moon"} />
                                     </button>
-                                    <button onClick={() => setSettings(s => ({ ...s, fontSize: s.fontSize >= 24 ? 16 : s.fontSize + 2 }))} className="p-2 hover:bg-black/5 rounded-full">
+                                    <button onClick={() => setSettings(s => ({ ...s, fontSize: s.fontSize >= 28 ? 16 : s.fontSize + 2 }))} className="p-2 hover:bg-black/10 rounded-full transition-colors">
                                         <Icon name="Type" />
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="mx-auto px-6 py-16" style={{ maxWidth: `${settings.maxWidth}px`, fontSize: `${settings.fontSize}px`, lineHeight: '2' }}>
+                        <div className="mx-auto px-6 py-16 fade-in-content" style={{ maxWidth: `${settings.maxWidth}px`, fontSize: `${settings.fontSize}px`, lineHeight: '1.8' }}>
                             <h2 className="text-3xl font-black mb-12 text-center leading-tight">{chapter.title}</h2>
                             {loadingContent ? (
-                                <div className="space-y-4 opacity-20">
-                                    {[...Array(10)].map((_, i) => <div key={i} className="h-4 bg-current rounded w-full animate-pulse"></div>)}
+                                <div className="space-y-6 opacity-20">
+                                    {[...Array(8)].map((_, i) => <div key={i} className="h-4 bg-current rounded w-full animate-pulse"></div>)}
                                 </div>
                             ) : (
                                 <div className="whitespace-pre-wrap space-y-6">{content}</div>
                             )}
 
-                            <div className="mt-24 flex justify-between gap-4 border-t border-black/5 pt-12 pb-20">
+                            <div className="mt-24 flex justify-between gap-4 border-t border-black/5 pt-12 pb-32">
                                 <button 
                                     disabled={chapterIndex === 0}
                                     onClick={() => setCurrentView({ type: 'reader', params: { novelId, chapterIndex: chapterIndex - 1 } })}
-                                    className="flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl border border-current opacity-60 hover:opacity-100 disabled:hidden"
+                                    className="flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl border border-current opacity-60 hover:opacity-100 disabled:opacity-0 disabled:pointer-events-none transition-all"
                                 >
                                     <Icon name="ArrowLeft" /> 上一章
                                 </button>
                                 <button 
                                     disabled={chapterIndex === novel.chapters.length - 1}
                                     onClick={() => setCurrentView({ type: 'reader', params: { novelId, chapterIndex: chapterIndex + 1 } })}
-                                    className="flex-1 flex items-center justify-center gap-2 p-4 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 disabled:hidden"
+                                    className="flex-1 flex items-center justify-center gap-2 p-4 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 disabled:opacity-0 disabled:pointer-events-none transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
                                 >
                                     下一章 <Icon name="ArrowRight" />
                                 </button>
@@ -230,11 +256,29 @@
                 );
             };
 
-            if (loading) return <div className="h-screen flex items-center justify-center text-indigo-600"><Icon name="Loader" className="animate-spin w-8 h-8" /></div>;
-            if (error) return <div className="h-screen flex flex-col items-center justify-center p-10 text-center"><Icon name="AlertTriangle" className="w-12 h-12 text-red-500 mb-4" /><p className="font-bold">{error}</p></div>;
+            // 全局渲染逻辑
+            if (loading) return (
+                <div className="h-screen flex flex-col items-center justify-center text-indigo-600 gap-4 bg-white dark:bg-zinc-900">
+                    <Icon name="Loader2" className="animate-spin w-10 h-10" />
+                    <p className="text-sm font-medium animate-pulse text-gray-400">正在开启书库...</p>
+                </div>
+            );
+            
+            if (error) return (
+                <div className="h-screen flex flex-col items-center justify-center p-10 text-center bg-white dark:bg-zinc-900">
+                    <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
+                        <Icon name="AlertTriangle" className="w-8 h-8" />
+                    </div>
+                    <h2 className="text-2xl font-bold mb-2">加载失败</h2>
+                    <p className="text-gray-500 mb-8 max-w-sm">{error}</p>
+                    <button onClick={() => window.location.reload()} className="px-6 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors">
+                        重试
+                    </button>
+                </div>
+            );
 
             return (
-                <div className={`min-h-screen ${settings.darkMode ? 'bg-zinc-900 text-white' : 'bg-gray-50'}`}>
+                <div className={`min-h-screen transition-colors ${settings.darkMode ? 'bg-zinc-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
                     {currentView.type === 'home' && <HomeView />}
                     {currentView.type === 'detail' && <DetailView novelId={currentView.params.novelId} />}
                     {currentView.type === 'reader' && <ReaderView novelId={currentView.params.novelId} chapterIndex={currentView.params.chapterIndex} />}
@@ -242,7 +286,9 @@
             );
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
+        // 创建根节点并渲染
+        const rootElement = document.getElementById('root');
+        const root = ReactDOM.createRoot(rootElement);
         root.render(<App />);
     </script>
 </body>

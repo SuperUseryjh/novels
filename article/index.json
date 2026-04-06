@@ -15,6 +15,16 @@
         { "id": "7", "title": "第七章", "path": "7.txt" },
         { "id": "8", "title": "尾声", "path": "8.txt" }
       ]
+    },
+    {
+      "id": "novel-02",
+      "title": "姚津昊的修罗场",
+      "author": "张灵韵",
+      "description": "何意味",
+      "chapters": [
+        { "id": "1", "title": "第一卷：一百三十七张纸条", "path": "1.txt" },
+        { "id": "2", "title": "六个人的心事", "path": "2.txt" }
+      ]
     }
   ]
 }

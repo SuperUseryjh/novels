@@ -40,7 +40,7 @@
         .dark .prose blockquote { border-left-color: #374151; color: #9ca3af; }
         .prose strong { font-weight: bold; }
         .prose em { font-style: italic; }
-        .prose code { background-color: rgba(0,0,0,0.05); padding: 0.2rem 0.4rem; rounded: 0.25rem; font-family: monospace; }
+        .prose code { background-color: rgba(0,0,0,0.05); padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: monospace; }
         .dark .prose code { background-color: rgba(255,255,255,0.1); }
     </style>
 </head>
@@ -211,10 +211,22 @@
                     load();
                 }, [novelId, chapterIndex]);
 
-                // 使用 marked 将 Markdown 转换为 HTML
+                // 修复逻辑：增加 window.marked 的存在性检查
                 const htmlContent = useMemo(() => {
                     if (!rawContent) return '';
-                    return window.marked.parse(rawContent);
+                    if (typeof window.marked === 'undefined') {
+                        return '<p>Markdown 解析器加载中...</p>';
+                    }
+                    // 兼容不同版本的 marked 导出方式
+                    try {
+                        if (window.marked.parse) {
+                            return window.marked.parse(rawContent);
+                        }
+                        return window.marked(rawContent);
+                    } catch (e) {
+                        console.error('Markdown parse error:', e);
+                        return rawContent;
+                    }
                 }, [rawContent]);
 
                 if (!novel || !chapter) return null;

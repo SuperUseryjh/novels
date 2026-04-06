@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的在线书库</title>
+    <!-- 基础库引入 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- 引入 Lucide 用于获取图标数据 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- 使用更稳定的 CDN 引入 Markdown 解析库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Inter:wght@400;600;800&display=swap');
+
+        :root {
+            --paper-bg: #fdfaf5;
+            --paper-text: #2c2c2c;
+        }
+
+        .transition-colors { transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s; }
+        
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
+        }
+
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        .font-serif-sc { font-family: 'Noto Serif SC', serif; }
+
+        .book-card-shadow {
+            box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.05), 0 2px 10px -2px rgba(0, 0, 0, 0.02);
+        }
+
+        .icon-placeholder { display: inline-block; width: 1em; height: 1em; vertical-align: middle; }
+        
+        .fade-in-content { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Markdown 样式高级定制 */
+        .prose { max-width: none; color: inherit; }
+        .prose h1, .prose h2, .prose h3 { font-family: 'Noto Serif SC', serif; color: inherit; border-bottom: none; }
+        .prose p { margin-bottom: 1.5rem; text-align: justify; }
+        .prose blockquote { 
+            border-left: 4px solid #d1d5db; 
+            background: rgba(0,0,0,0.03); 
+            padding: 1rem 1.5rem; 
+            border-radius: 0 0.5rem 0.5rem 0;
+            font-style: normal;
+            color: #6b7280;
+        }
+        .dark .prose blockquote { border-left-color: #4b5563; background: rgba(255,255,255,0.05); }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #374151; }
+    </style>
+</head>
+<body class="bg-gray-50 transition-colors">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        /**
+         * Icon 组件
+         */
+        const Icon = ({ name, className = "w-5 h-5" }) => {
+            const containerRef = useRef(null);
+
+            useEffect(() => {
+                if (window.lucide && containerRef.current) {
+                    containerRef.current.innerHTML = '';
+                    const iconName = name.charAt(0).toLowerCase() + name.slice(1);
+                    const iconData = window.lucide.icons[name] || window.lucide.icons[iconName];
+                    
+                    if (iconData) {
+                        const svg = window.lucide.createElement(iconData);
+                        className.split(' ').forEach(cls => {
+                            if(cls) svg.classList.add(cls);
+                        });
+                        containerRef.current.appendChild(svg);
+                    }
+                }
+            }, [name, className]);
+
+            return <span ref={containerRef} className={`inline-flex items-center justify-center ${className} icon-placeholder`}></span>;
+        };
+
+        const App = () => {
+            const [config, setConfig] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            
+            // 初始路由解析逻辑
+            const getInitialView = () => {
+                const params = new URLSearchParams(window.location.search);
+                const novelId = params.get('id');
+                const chapterIndex = params.get('chapter');
+
+                if (novelId && chapterIndex !== null) {
+                    return { type: 'reader', params: { novelId, chapterIndex: parseInt(chapterIndex, 10) } };
+                } else if (novelId) {
+                    return { type: 'detail', params: { novelId } };
+                }
+                return { type: 'home', params: {} };
+            };
+
+            const [currentView, setCurrentView] = useState(getInitialView());
+            
+            const [settings, setSettings] = useState({
+                darkMode: false,
+                fontSize: 19,
+                maxWidth: 720
+            });
+
+            const [isMarkedReady, setIsMarkedReady] = useState(typeof window.marked !== 'undefined');
+
+            // 监听 URL 变化 (支持浏览器后退键)
+            useEffect(() => {
+                const handlePopState = () => {
+                    setCurrentView(getInitialView());
+                };
+                window.addEventListener('popstate', handlePopState);
+                return () => window.removeEventListener('popstate', handlePopState);
+            }, []);
+
+            // 路由跳转辅助函数
+            const navigateTo = (view) => {
+                const url = new URL(window.location.href);
+                url.search = ''; // 清空现有参数
+                
+                if (view.type === 'detail') {
+                    url.searchParams.set('id', view.params.novelId);
+                } else if (view.type === 'reader') {
+                    url.searchParams.set('id', view.params.novelId);
+                    url.searchParams.set('chapter', view.params.chapterIndex);
+                }
+                
+                window.history.pushState({}, '', url.toString());
+                setCurrentView(view);
+            };
+
+            useEffect(() => {
+                if (!isMarkedReady) {
+                    const timer = setInterval(() => {
+                        if (typeof window.marked !== 'undefined') {
+                            setIsMarkedReady(true);
+                            clearInterval(timer);
+                        }
+                    }, 500);
+                    return () => clearInterval(timer);
+                }
+            }, [isMarkedReady]);
+
+            useEffect(() => {
+                const fetchConfig = async () => {
+                    try {
+                        setLoading(true);
+                        const response = await fetch('./article/index.json');
+                        if (!response.ok) throw new Error('无法读取配置文件。');
+                        const data = await response.json();
+                        setConfig(data);
+                    } catch (err) {
+                        setError(err.message || '加载失败');
+                    } finally {
+                        setLoading(false);
+                    }
+                };
+                fetchConfig();
+            }, []);
+
+            // 首页视图
+            const HomeView = () => (
+                <div className="max-w-5xl mx-auto p-8 pt-16">
+                    <header className="mb-16 text-center">
+                        <div className="inline-flex p-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+                            <Icon name="Compass" className="w-8 h-8 text-rose-500" />
+                        </div>
+                        <h1 className="text-4xl font-serif-sc font-bold tracking-tight text-gray-900 dark:text-white mb-3">私人书廊</h1>
+                        <div className="w-12 h-1 bg-rose-500 mx-auto rounded-full"></div>
+                    </header>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {config?.novels?.map(novel => (
+                            <div 
+                                key={novel.id}
+                                onClick={() => navigateTo({ type: 'detail', params: { novelId: novel.id } })}
+                                className="group relative flex flex-col bg-white dark:bg-gray-800 rounded-2xl book-card-shadow border border-gray-100/50 dark:border-gray-700 cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
+                            >
+                                <div className="aspect-[3/4] bg-gray-100 dark:bg-gray-900 overflow-hidden relative">
+                                    {novel.cover ? 
+                                        <img src={novel.cover} alt={novel.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" /> : 
+                                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+                                            <Icon name="Book" className="w-12 h-12 text-gray-300 dark:text-gray-600" />
+                                        </div>
+                                    }
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+                                        <span className="text-white text-sm font-medium flex items-center gap-1">书籍详情 <Icon name="ChevronRight" className="w-4 h-4" /></span>
+                                    </div>
+                                </div>
+                                <div className="p-6">
+                                    <h2 className="text-xl font-serif-sc font-bold mb-1 truncate text-gray-900 dark:text-white">{novel.title}</h2>
+                                    <p className="text-sm text-rose-600 dark:text-rose-400 font-medium mb-3">{novel.author}</p>
+                                    <p className="text-xs text-gray-400 dark:text-gray-500 line-clamp-3 leading-relaxed">{novel.description}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+            // 详情视图
+            const DetailView = ({ novelId }) => {
+                const novel = config?.novels.find(n => n.id === novelId);
+                if (!novel) return (
+                    <div className="h-screen flex flex-col items-center justify-center p-10 text-center">
+                         <h2 className="text-xl font-bold mb-4 dark:text-white">未找到该小说 ID: {novelId}</h2>
+                         <button onClick={() => navigateTo({ type: 'home', params: {} })} className="text-rose-500 font-bold">返回书库</button>
+                    </div>
+                );
+
+                return (
+                    <div className="max-w-4xl mx-auto p-8 pt-12 fade-in-content">
+                        <button 
+                            onClick={() => navigateTo({ type: 'home', params: {} })}
+                            className="flex items-center gap-2 text-gray-400 hover:text-rose-500 font-medium mb-12 transition-colors"
+                        >
+                            <Icon name="ArrowLeft" className="w-4 h-4" /> 返回书库
+                        </button>
+                        <div className="flex flex-col md:flex-row gap-12 mb-20 items-start">
+                            <div className="w-56 aspect-[3/4] bg-white dark:bg-gray-800 rounded-xl shadow-2xl flex-shrink-0 overflow-hidden border-8 border-white dark:border-gray-800 sticky top-12">
+                                {novel.cover ? 
+                                    <img src={novel.cover} alt={novel.title} className="w-full h-full object-cover" /> : 
+                                    <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                                        <Icon name="BookOpen" className="w-16 h-16 text-gray-200" />
+                                    </div>
+                                }
+                            </div>
+                            <div className="flex-1">
+                                <h1 className="text-5xl font-serif-sc font-bold mb-4 leading-tight text-gray-900 dark:text-white">{novel.title}</h1>
+                                <p className="text-xl text-rose-600 dark:text-rose-400 mb-8 font-medium italic">by {novel.author}</p>
+                                <div className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed max-w-2xl mb-10">
+                                    {novel.description}
+                                </div>
+                                <div className="flex gap-4">
+                                    <button 
+                                        onClick={() => navigateTo({ type: 'reader', params: { novelId, chapterIndex: 0 } })}
+                                        className="px-8 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold hover:bg-rose-600 dark:hover:bg-rose-500 hover:text-white transition-all shadow-lg"
+                                    >
+                                        立刻开始阅读
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-sm border border-gray-100 dark:border-gray-700">
+                            <h3 className="text-2xl font-serif-sc font-bold mb-8 flex items-center gap-3">
+                                <Icon name="Hash" className="text-rose-500" /> 章节目录
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-1">
+                                {novel.chapters.map((chapter, index) => (
+                                    <button
+                                        key={chapter.id}
+                                        onClick={() => navigateTo({ type: 'reader', params: { novelId, chapterIndex: index } })}
+                                        className="text-left py-4 px-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-all flex items-center gap-4 group border-b border-gray-50 dark:border-gray-700/50"
+                                    >
+                                        <span className="text-xs font-mono text-gray-300 dark:text-gray-600 group-hover:text-rose-400">{(index + 1).toString().padStart(2, '0')}</span>
+                                        <span className="text-gray-700 dark:text-gray-200 group-hover:text-rose-600 dark:group-hover:text-rose-400">{chapter.title}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // 阅读器视图
+            const ReaderView = ({ novelId, chapterIndex }) => {
+                const [rawContent, setRawContent] = useState('');
+                const [loadingContent, setLoadingContent] = useState(true);
+                const novel = config?.novels.find(n => n.id === novelId);
+                const chapter = novel?.chapters[chapterIndex];
+
+                useEffect(() => {
+                    const load = async () => {
+                        if (!chapter) return;
+                        try {
+                            setLoadingContent(true);
+                            const res = await fetch(`./article/${novelId}/${chapter.path}`);
+                            const txt = await res.text();
+                            setRawContent(txt);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        } catch {
+                            setRawContent('加载内容失败。');
+                        } finally {
+                            setLoadingContent(false);
+                        }
+                    };
+                    load();
+                }, [novelId, chapterIndex]);
+
+                const htmlContent = useMemo(() => {
+                    if (!rawContent) return '';
+                    const m = window.marked;
+                    if (typeof m === 'undefined') return '<div class="text-center py-20 opacity-40">正在加载解析器...</div>';
+                    try {
+                        return m.parse(rawContent);
+                    } catch (e) {
+                        return rawContent;
+                    }
+                }, [rawContent, isMarkedReady]);
+
+                if (!novel || !chapter) return (
+                    <div className="h-screen flex flex-col items-center justify-center p-10 text-center">
+                         <h2 className="text-xl font-bold mb-4 dark:text-white">未找到章节信息</h2>
+                         <button onClick={() => navigateTo({ type: 'home', params: {} })} className="text-rose-500 font-bold">返回书库</button>
+                    </div>
+                );
+
+                const readerBg = settings.darkMode ? 'bg-zinc-900 text-zinc-400' : 'bg-[#fcfaf2] text-[#333333]';
+
+                return (
+                    <div className={`min-h-screen transition-all duration-500 ${readerBg}`}>
+                        <div className="fixed top-0 left-0 right-0 z-20 h-16 flex items-center bg-inherit/80 backdrop-blur-md px-6">
+                            <div className="max-w-5xl mx-auto w-full flex justify-between items-center">
+                                <button onClick={() => navigateTo({ type: 'detail', params: { novelId } })} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors">
+                                    <Icon name="ChevronLeft" />
+                                </button>
+                                <div className="text-sm font-serif-sc font-bold opacity-40 truncate px-4">{chapter.title}</div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setSettings(s => ({ ...s, darkMode: !s.darkMode }))} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors">
+                                        <Icon name={settings.darkMode ? "Sun" : "Moon"} />
+                                    </button>
+                                    <button onClick={() => setSettings(s => ({ ...s, fontSize: s.fontSize >= 30 ? 16 : s.fontSize + 2 }))} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors">
+                                        <Icon name="Type" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mx-auto px-6 py-32 fade-in-content font-serif-sc" style={{ maxWidth: `${settings.maxWidth}px`, fontSize: `${settings.fontSize}px`, lineHeight: '1.9' }}>
+                            <h2 className="text-4xl font-bold mb-20 text-center text-gray-900 dark:text-gray-100">{chapter.title}</h2>
+                            {loadingContent ? (
+                                <div className="space-y-8 py-20">
+                                    {[...Array(6)].map((_, i) => <div key={i} className="h-4 bg-gray-200 dark:bg-gray-800 rounded-full w-full animate-pulse"></div>)}
+                                </div>
+                            ) : (
+                                <div 
+                                    className="prose dark:prose-invert"
+                                    dangerouslySetInnerHTML={{ __html: htmlContent }}
+                                />
+                            )}
+
+                            <div className="mt-32 flex flex-col items-center gap-12 pb-40">
+                                <div className="w-12 h-1 bg-gray-200 dark:bg-gray-800 rounded-full"></div>
+                                <div className="w-full flex justify-between gap-6">
+                                    <button 
+                                        disabled={chapterIndex === 0}
+                                        onClick={() => navigateTo({ type: 'reader', params: { novelId, chapterIndex: chapterIndex - 1 } })}
+                                        className="flex-1 flex items-center justify-center gap-3 p-6 rounded-2xl bg-black/5 dark:bg-white/5 hover:bg-rose-500 hover:text-white disabled:opacity-0 transition-all font-bold"
+                                    >
+                                        <Icon name="ArrowLeft" /> 上一章
+                                    </button>
+                                    <button 
+                                        disabled={chapterIndex === novel.chapters.length - 1}
+                                        onClick={() => navigateTo({ type: 'reader', params: { novelId, chapterIndex: chapterIndex + 1 } })}
+                                        className="flex-1 flex items-center justify-center gap-3 p-6 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-2xl hover:bg-rose-600 dark:hover:bg-rose-400 dark:hover:text-white transition-all font-bold shadow-xl"
+                                    >
+                                        下一章 <Icon name="ArrowRight" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            if (loading) return (
+                <div className="h-screen flex flex-col items-center justify-center text-rose-500 bg-[#fdfaf5] dark:bg-zinc-950">
+                    <Icon name="Loader2" className="animate-spin w-12 h-12 mb-4" />
+                    <p className="text-xs font-bold tracking-widest uppercase opacity-40">Loading Library</p>
+                </div>
+            );
+            
+            if (error) return (
+                <div className="h-screen flex flex-col items-center justify-center p-10 bg-white dark:bg-zinc-900">
+                    <Icon name="Frown" className="w-16 h-16 text-gray-200 mb-6" />
+                    <h2 className="text-xl font-bold mb-4 dark:text-white">{error}</h2>
+                    <button onClick={() => window.location.reload()} className="px-8 py-3 bg-rose-500 text-white rounded-full font-bold shadow-lg shadow-rose-200">
+                        重试
+                    </button>
+                </div>
+            );
+
+            return (
+                <div className={`min-h-screen transition-colors ${settings.darkMode ? 'dark bg-zinc-950' : 'bg-[#f8f9fa]'}`}>
+                    <div className="dark:bg-zinc-950 dark:text-gray-100">
+                        {currentView.type === 'home' && <HomeView />}
+                        {currentView.type === 'detail' && <DetailView novelId={currentView.params.novelId} />}
+                        {currentView.type === 'reader' && <ReaderView novelId={currentView.params.novelId} chapterIndex={currentView.params.chapterIndex} />}
+                    </div>
+                </div>
+            );
+        };
+
+        const rootElement = document.getElementById('root');
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(<App />);
+    </script>
+</body>
+</html>

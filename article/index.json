@@ -26,6 +26,23 @@
         { "id": "2", "title": "第二卷：六个人的心事", "path": "2.txt" },
         { "id": "3", "title": "第三卷：胖子", "path": "3.txt" }
       ]
+    },
+    {
+      "id": "novel-03",
+      "title": "东方绿洲的十四岁",
+      "author": "张灵韵",
+      "description": "这集神了",
+      "chapters": [
+        { "id": "1", "title": "楔子", "path": "1.txt" },
+        { "id": "2", "title": "第一章", "path": "2.txt" },
+        { "id": "3", "title": "第二章", "path": "3.txt" },
+        { "id": "4", "title": "第三章", "path": "4.txt" },
+        { "id": "5", "title": "第四章", "path": "5.txt" },
+        { "id": "6", "title": "第五章", "path": "6.txt" },
+        { "id": "7", "title": "第六章", "path": "7.txt" },
+        { "id": "8", "title": "第七章", "path": "8.txt" },
+        { "id": "9", "title": "尾声", "path": "9.txt"}
+      ]
     }
   ]
 }

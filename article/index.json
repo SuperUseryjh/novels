@@ -33,6 +33,7 @@
       "author": "张灵韵",
       "description": "这集神了",
       "chapters": [
+        { "id": "0", "title": "前言", "path": "0.txt"},
         { "id": "1", "title": "楔子", "path": "1.txt" },
         { "id": "2", "title": "第一章", "path": "2.txt" },
         { "id": "3", "title": "第二章", "path": "3.txt" },

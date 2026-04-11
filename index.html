@@ -56,6 +56,13 @@
             to { opacity: 1; transform: translate(-50%, 0); }
         }
 
+        /* 恢复阅读弹窗动画 */
+        .resume-banner { animation: slideInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideInUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
         /* Markdown 样式高级定制 */
         .prose { max-width: none; color: inherit; }
         .prose h1, .prose h2, .prose h3 { font-family: 'Noto Serif SC', serif; color: inherit; border-bottom: none; }
@@ -125,6 +132,7 @@
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
             const [toast, setToast] = useState({ message: '', visible: false });
+            const [resumeInfo, setResumeInfo] = useState(null);
             
             // 初始路由解析逻辑
             const getInitialView = () => {
@@ -159,10 +167,48 @@
                 return () => window.removeEventListener('popstate', handlePopState);
             }, []);
 
+            // 记录阅读进度
+            useEffect(() => {
+                if (currentView.type === 'reader') {
+                    const { novelId, chapterIndex } = currentView.params;
+                    localStorage.setItem('last_read', JSON.stringify({
+                        novelId,
+                        chapterIndex,
+                        time: Date.now()
+                    }));
+                    // 如果正在阅读，隐藏恢复提示
+                    setResumeInfo(null);
+                }
+            }, [currentView]);
+
+            // 检查是否有历史记录
+            useEffect(() => {
+                if (config && currentView.type === 'home') {
+                    const lastRead = localStorage.getItem('last_read');
+                    if (lastRead) {
+                        try {
+                            const parsed = JSON.parse(lastRead);
+                            const novel = config.novels.find(n => n.id === parsed.novelId);
+                            const chapter = novel?.chapters[parsed.chapterIndex];
+                            if (novel && chapter) {
+                                setResumeInfo({
+                                    novelId: parsed.novelId,
+                                    chapterIndex: parsed.chapterIndex,
+                                    novelTitle: novel.title,
+                                    chapterTitle: chapter.title
+                                });
+                            }
+                        } catch (e) {
+                            console.error("Failed to parse history");
+                        }
+                    }
+                }
+            }, [config, currentView]);
+
             // 路由跳转辅助函数
             const navigateTo = (view) => {
                 const url = new URL(window.location.href);
-                url.search = ''; // 清空现有参数
+                url.search = ''; 
                 
                 if (view.type === 'detail') {
                     url.searchParams.set('id', view.params.novelId);
@@ -228,7 +274,7 @@
 
             // 首页视图
             const HomeView = () => (
-                <div className="max-w-5xl mx-auto p-8 pt-16">
+                <div className="max-w-5xl mx-auto p-8 pt-16 relative min-h-screen">
                     <header className="mb-16 text-center">
                         <div className="inline-flex p-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
                             <Icon name="Compass" className="w-8 h-8 text-rose-500" />
@@ -236,7 +282,8 @@
                         <h1 className="text-4xl font-serif-sc font-bold tracking-tight text-gray-900 dark:text-white mb-3">私人书廊</h1>
                         <div className="w-12 h-1 bg-rose-500 mx-auto rounded-full"></div>
                     </header>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
                         {config?.novels?.map(novel => (
                             <div 
                                 key={novel.id}
@@ -262,6 +309,37 @@
                             </div>
                         ))}
                     </div>
+
+                    {/* 恢复阅读提示 */}
+                    {resumeInfo && (
+                        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-40 resume-banner">
+                            <div className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 p-4 rounded-2xl shadow-2xl flex items-center justify-between border border-white/10 dark:border-black/10">
+                                <div className="flex items-center gap-4 overflow-hidden">
+                                    <div className="bg-rose-500 p-2 rounded-xl shrink-0">
+                                        <Icon name="History" className="text-white w-5 h-5" />
+                                    </div>
+                                    <div className="overflow-hidden">
+                                        <p className="text-[10px] uppercase tracking-wider opacity-60 font-bold">上次读到</p>
+                                        <p className="text-sm font-bold truncate">《{resumeInfo.novelTitle}》 {resumeInfo.chapterTitle}</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 shrink-0">
+                                    <button 
+                                        onClick={() => setResumeInfo(null)}
+                                        className="p-2 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-colors"
+                                    >
+                                        <Icon name="X" className="w-4 h-4" />
+                                    </button>
+                                    <button 
+                                        onClick={() => navigateTo({ type: 'reader', params: { novelId: resumeInfo.novelId, chapterIndex: resumeInfo.chapterIndex } })}
+                                        className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg shadow-rose-500/20"
+                                    >
+                                        继续阅读
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
 
@@ -320,7 +398,7 @@
                                         onClick={() => navigateTo({ type: 'reader', params: { novelId, chapterIndex: index } })}
                                         className="text-left py-4 px-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-all flex items-center gap-4 group border-b border-gray-50 dark:border-gray-700/50"
                                     >
-                                        <span className="text-xs font-mono text-gray-300 dark:text-gray-600 group-hover:text-rose-400">{(index + 1).toString().padStart(2, '0')}</span>
+                                        <span className="text-xs font-mono text-gray-300 dark:text-gray-600 group-hover:text-rose-400">{ (index + 1).toString().padStart(2, '0') }</span>
                                         <span className="text-gray-700 dark:text-gray-200 group-hover:text-rose-600 dark:group-hover:text-rose-400">{chapter.title}</span>
                                     </button>
                                 ))}

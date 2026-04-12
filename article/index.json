@@ -6,14 +6,14 @@
       "author": "张灵韵",
       "description": "这啥鬼啊",
       "chapters": [
-        { "id": "1", "title": "第一章", "path": "1.txt" },
-        { "id": "2", "title": "第二章", "path": "2.txt" },
-        { "id": "3", "title": "第三章", "path": "3.txt" },
-        { "id": "4", "title": "第四章", "path": "4.txt" },
-        { "id": "5", "title": "第五章", "path": "5.txt" },
-        { "id": "6", "title": "第六章", "path": "6.txt" },
-        { "id": "7", "title": "第七章", "path": "7.txt" },
-        { "id": "8", "title": "尾声", "path": "8.txt" }
+        { "id": "1", "title": "第一章", "path": "1.md" },
+        { "id": "2", "title": "第二章", "path": "2.md" },
+        { "id": "3", "title": "第三章", "path": "3.md" },
+        { "id": "4", "title": "第四章", "path": "4.md" },
+        { "id": "5", "title": "第五章", "path": "5.md" },
+        { "id": "6", "title": "第六章", "path": "6.md" },
+        { "id": "7", "title": "第七章", "path": "7.md" },
+        { "id": "8", "title": "尾声", "path": "8.md" }
       ]
     },
     {
@@ -22,9 +22,9 @@
       "author": "张灵韵",
       "description": "何意味",
       "chapters": [
-        { "id": "1", "title": "第一卷：一百三十七张纸条", "path": "1.txt" },
-        { "id": "2", "title": "第二卷：六个人的心事", "path": "2.txt" },
-        { "id": "3", "title": "第三卷：胖子", "path": "3.txt" }
+        { "id": "1", "title": "第一卷：一百三十七张纸条", "path": "1.md" },
+        { "id": "2", "title": "第二卷：六个人的心事", "path": "2.md" },
+        { "id": "3", "title": "第三卷：胖子", "path": "3.md" }
       ]
     },
     {
@@ -33,16 +33,16 @@
       "author": "张灵韵",
       "description": "这集神了",
       "chapters": [
-        { "id": "0", "title": "前言", "path": "0.txt"},
-        { "id": "1", "title": "楔子", "path": "1.txt" },
-        { "id": "2", "title": "第一章", "path": "2.txt" },
-        { "id": "3", "title": "第二章", "path": "3.txt" },
-        { "id": "4", "title": "第三章", "path": "4.txt" },
-        { "id": "5", "title": "第四章", "path": "5.txt" },
-        { "id": "6", "title": "第五章", "path": "6.txt" },
-        { "id": "7", "title": "第六章", "path": "7.txt" },
-        { "id": "8", "title": "第七章", "path": "8.txt" },
-        { "id": "9", "title": "尾声", "path": "9.txt"}
+        { "id": "0", "title": "前言", "path": "0.md"},
+        { "id": "1", "title": "楔子", "path": "1.md" },
+        { "id": "2", "title": "第一章", "path": "2.md" },
+        { "id": "3", "title": "第二章", "path": "3.md" },
+        { "id": "4", "title": "第三章", "path": "4.md" },
+        { "id": "5", "title": "第四章", "path": "5.md" },
+        { "id": "6", "title": "第五章", "path": "6.md" },
+        { "id": "7", "title": "第六章", "path": "7.md" },
+        { "id": "8", "title": "第七章", "path": "8.md" },
+        { "id": "9", "title": "尾声", "path": "9.md"}
       ]
     },
     {
@@ -51,12 +51,12 @@
       "author": "张灵韵",
       "description": "666玄幻小说",
       "chapters": [
-        { "id": "1", "title": "楔子", "path": "1.txt" },
-        { "id": "2", "title": "第一章", "path": "2.txt" },
-        { "id": "3", "title": "第二章", "path": "3.txt" },
-        { "id": "4", "title": "第三章", "path": "4.txt" },
-        { "id": "5", "title": "第四章", "path": "5.txt" },
-        { "id": "6", "title": "尾声", "path": "6.txt" }
+        { "id": "1", "title": "楔子", "path": "1.md" },
+        { "id": "2", "title": "第一章", "path": "2.md" },
+        { "id": "3", "title": "第二章", "path": "3.md" },
+        { "id": "4", "title": "第三章", "path": "4.md" },
+        { "id": "5", "title": "第四章", "path": "5.md" },
+        { "id": "6", "title": "尾声", "path": "6.md" }
       ]
     },
     {
@@ -65,13 +65,24 @@
       "author": "张灵韵",
       "description": "还有第五关",
       "chapters": [
-        { "id": "1", "title": "第一章", "path": "1.txt" },
-        { "id": "2", "title": "第二章", "path": "2.txt" },
-        { "id": "3", "title": "第三章", "path": "3.txt" },
-        { "id": "4", "title": "第四章", "path": "4.txt" },
-        { "id": "5", "title": "第五章", "path": "5.txt" },
-        { "id": "6", "title": "第六章", "path": "6.txt" },
-        { "id": "7", "title": "尾声", "path": "7.txt" }
+        { "id": "1", "title": "第一章", "path": "1.md" },
+        { "id": "2", "title": "第二章", "path": "2.md" },
+        { "id": "3", "title": "第三章", "path": "3.md" },
+        { "id": "4", "title": "第四章", "path": "4.md" },
+        { "id": "5", "title": "第五章", "path": "5.md" },
+        { "id": "6", "title": "第六章", "path": "6.md" },
+        { "id": "7", "title": "尾声", "path": "7.md" }
+      ]
+    },
+    {
+      "id": "novel-06",
+      "title": "作者错了，原谅我吧",
+      "author": "全班最帅的男人(知错版）和AI",
+      "description": "还有投稿环节",
+      "chapters": [
+        { "id": "0", "title": "前言", "path": "0.md"},
+        { "id": "1", "title": "余光", "path": "1.md" },
+        { "id": "2", "title": "第二章", "path": "2.md" }
       ]
     }
   ]

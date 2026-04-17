@@ -77,12 +77,27 @@
     {
       "id": "novel-06",
       "title": "作者错了，原谅我吧",
-      "author": "全班最帅的男人(知错版）和AI",
+      "author": "全班最帅的男人（知错版）和AI",
       "description": "还有投稿环节",
       "chapters": [
         { "id": "0", "title": "前言", "path": "0.md"},
         { "id": "1", "title": "余光", "path": "1.md" },
         { "id": "2", "title": "第二章", "path": "2.md" }
+      ]
+    },
+    {
+      "id": "novel-07",
+      "title": "我的青春，我的世界",
+      "author": "全班最帅的男人（知错版）和AI",
+      "description": "还有投稿环节 2.0",
+      "chapters": [
+        { "id": "0", "title": "前言", "path": "0.md" },
+        { "id": "1", "title": "Monkey", "path": "1.md" },
+        { "id": "2", "title": "圈子", "path": "2.md" },
+        { "id": "3", "title": "电车", "path": "3.md" },
+        { "id": "4", "title": "无线电", "path": "4.md" },
+        { "id": "5", "title": "无线电（续）", "path": "5.md" },
+        { "id": "6", "title": "图书馆", "path": "6.md"}
       ]
     }
   ]

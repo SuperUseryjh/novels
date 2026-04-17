@@ -87,7 +87,7 @@
     },
     {
       "id": "novel-07",
-      "title": "我的青春，我的世界",
+      "title": "民国十八年",
       "author": "全班最帅的男人（知错版）和AI",
       "description": "还有投稿环节 2.0",
       "chapters": [
@@ -97,7 +97,9 @@
         { "id": "3", "title": "电车", "path": "3.md" },
         { "id": "4", "title": "无线电", "path": "4.md" },
         { "id": "5", "title": "无线电（续）", "path": "5.md" },
-        { "id": "6", "title": "图书馆", "path": "6.md"}
+        { "id": "6", "title": "图书馆", "path": "6.md"},
+        { "id": "7", "title": "茶馆", "path": "7.md" },
+        { "id": "8", "title": "尾声", "path": "8.md" }
       ]
     }
   ]

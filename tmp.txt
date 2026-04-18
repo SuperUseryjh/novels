@@ -1,0 +1,342 @@
+/**
+ * 小说仓库自动化管理 Worker (D1 + 管理员审核版)
+ * 环境变量要求:
+ * - GITHUB_PAT: GitHub 访问令牌
+ * - GITHUB_REPO: 格式为 "用户名/仓库名"
+ * - ADMIN_PASSWORD: 管理员后台登录密码
+ * - DB: 绑定 D1 数据库
+ */
+
+export default {
+  async fetch(request, env) {
+    const { GITHUB_PAT, GITHUB_REPO, ADMIN_PASSWORD, DB } = env;
+    const url = new URL(request.url);
+
+    // --- 路由: 静态 HTML 页面 ---
+    if (request.method === "GET") {
+      if (url.pathname === "/admin") {
+        return new Response(generateAdminHTML(), { headers: { "Content-Type": "text/html;charset=UTF-8" } });
+      }
+      return new Response(generateUserHTML(), { headers: { "Content-Type": "text/html;charset=UTF-8" } });
+    }
+
+    // --- 路由: API 请求 ---
+    
+    // 1. 用户提交草稿 (保存到 D1)
+    if (url.pathname === "/api/submit" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const { novelMeta, chapters } = body;
+        
+        // 简单验证
+        if (!chapters || chapters.length === 0) throw new Error("缺少内容");
+
+        for (const ch of chapters) {
+          await DB.prepare(
+            `INSERT INTO drafts (novel_id, title, author, description, chapter_title, content) 
+             VALUES (?, ?, ?, ?, ?, ?)`
+          ).bind(
+            novelMeta?.id || ch.novelId,
+            novelMeta?.title || "",
+            novelMeta?.author || "",
+            novelMeta?.description || "",
+            ch.title,
+            ch.content
+          ).run();
+        }
+
+        return new Response(JSON.stringify({ success: true, message: "内容已提交，等待管理员审核。" }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (err) {
+        return new Response(err.message, { status: 500 });
+      }
+    }
+
+    // 2. 管理员获取待审核列表
+    if (url.pathname === "/api/admin/list" && request.method === "POST") {
+      const { password } = await request.json();
+      if (password !== ADMIN_PASSWORD) return new Response("Unauthorized", { status: 401 });
+
+      const { results } = await DB.prepare("SELECT * FROM drafts WHERE status = 'pending' ORDER BY created_at DESC").all();
+      return new Response(JSON.stringify(results), { headers: { "Content-Type": "application/json" } });
+    }
+
+    // 3. 管理员审核并通过 (同步到 GitHub)
+    if (url.pathname === "/api/admin/approve" && request.method === "POST") {
+      const { password, ids } = await request.json();
+      if (password !== ADMIN_PASSWORD) return new Response("Unauthorized", { status: 401 });
+
+      try {
+        const headers = {
+          "Authorization": `token ${GITHUB_PAT}`,
+          "Accept": "application/vnd.github.v3+json",
+          "User-Agent": "CF-Worker-Novel-Manager"
+        };
+
+        // 获取 index.json
+        const indexPath = "article/index.json";
+        const indexRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${indexPath}`, { headers });
+        let indexData = { novels: [] };
+        let indexSha = null;
+
+        if (indexRes.ok) {
+          const fileInfo = await indexRes.json();
+          indexSha = fileInfo.sha;
+          indexData = JSON.parse(decodeURIComponent(escape(atob(fileInfo.content))));
+        }
+
+        // 处理选中的草稿
+        for (const id of ids) {
+          const draft = await DB.prepare("SELECT * FROM drafts WHERE id = ?").bind(id).first();
+          if (!draft) continue;
+
+          // 确保小说在索引中
+          let novelIndex = indexData.novels.findIndex(n => n.id === draft.novel_id);
+          if (novelIndex === -1) {
+            indexData.novels.push({
+              id: draft.novel_id,
+              title: draft.title || "未知书名",
+              author: draft.author || "佚名",
+              description: draft.description || "",
+              chapters: []
+            });
+            novelIndex = indexData.novels.length - 1;
+          }
+
+          // 上传章节文件到 GitHub
+          const timestamp = Date.now();
+          const fileName = `chapter_${timestamp}_${Math.floor(Math.random()*1000)}.md`;
+          const filePath = `article/${draft.novel_id}/${fileName}`;
+
+          const uploadRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${filePath}`, {
+            method: "PUT",
+            headers,
+            body: JSON.stringify({
+              message: `Approve: ${draft.chapter_title}`,
+              content: btoa(unescape(encodeURIComponent(draft.content)))
+            })
+          });
+
+          if (uploadRes.ok) {
+            indexData.novels[novelIndex].chapters.push({
+              id: `ch_${timestamp}`,
+              title: draft.chapter_title,
+              path: fileName
+            });
+            // 更新 D1 状态
+            await DB.prepare("UPDATE drafts SET status = 'approved' WHERE id = ?").bind(id).run();
+          }
+        }
+
+        // 写回 index.json
+        await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${indexPath}`, {
+          method: "PUT",
+          headers,
+          body: JSON.stringify({
+            message: `Update index after approval`,
+            content: btoa(unescape(encodeURIComponent(JSON.stringify(indexData, null, 2)))),
+            sha: indexSha
+          })
+        });
+
+        return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
+      } catch (err) {
+        return new Response(err.message, { status: 500 });
+      }
+    }
+
+    return new Response("Not Found", { status: 404 });
+  }
+};
+
+// --- 前端 HTML 模板 ---
+
+function generateUserHTML() {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小说投稿系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState } = React;
+        const App = () => {
+            const [form, setForm] = useState({ novelId: '', title: '', author: '', chTitle: '', content: '' });
+            const [loading, setLoading] = useState(false);
+            const [msg, setMsg] = useState('');
+
+            const submit = async () => {
+                setLoading(true);
+                try {
+                    const res = await fetch('/api/submit', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            novelMeta: { id: form.novelId, title: form.title, author: form.author },
+                            chapters: [{ title: form.chTitle, content: form.content }]
+                        })
+                    });
+                    const data = await res.json();
+                    setMsg(data.message);
+                    if(res.ok) setForm({ ...form, chTitle: '', content: '' });
+                } catch(e) { setMsg("提交失败"); }
+                setLoading(false);
+            };
+
+            return (
+                <div className="max-w-2xl mx-auto p-6">
+                    <h1 className="text-2xl font-bold mb-6 text-gray-800">创作中心 - 投稿草稿</h1>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">书籍 ID (如: my-novel)</label>
+                            <input className="w-full mt-1 p-2 bg-gray-50 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" 
+                                value={form.novelId} onChange={e => setForm({...form, novelId: e.target.value})} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">书名</label>
+                                <input className="w-full mt-1 p-2 bg-gray-50 border rounded-lg" 
+                                    value={form.title} onChange={e => setForm({...form, title: e.target.value})} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">作者</label>
+                                <input className="w-full mt-1 p-2 bg-gray-50 border rounded-lg" 
+                                    value={form.author} onChange={e => setForm({...form, author: e.target.value})} />
+                            </div>
+                        </div>
+                        <hr />
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">章节标题</label>
+                            <input className="w-full mt-1 p-2 bg-gray-50 border rounded-lg" 
+                                value={form.chTitle} onChange={e => setForm({...form, chTitle: e.target.value})} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">内容 (Markdown)</label>
+                            <textarea className="w-full mt-1 p-2 bg-gray-50 border rounded-lg h-64" 
+                                value={form.content} onChange={e => setForm({...form, content: e.target.value})} />
+                        </div>
+                        <button onClick={submit} disabled={loading} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50">
+                            {loading ? "提交中..." : "提交审核"}
+                        </button>
+                        {msg && <p className="text-center text-sm font-medium text-green-600">{msg}</p>}
+                    </div>
+                </div>
+            );
+        };
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
+  `;
+}
+
+function generateAdminHTML() {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>管理员后台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const App = () => {
+            const [pass, setPass] = useState('');
+            const [authed, setAuthed] = useState(false);
+            const [list, setList] = useState([]);
+            const [loading, setLoading] = useState(false);
+
+            const fetchList = async () => {
+                const res = await fetch('/api/admin/list', { method: 'POST', body: JSON.stringify({ password: pass }) });
+                if (res.ok) {
+                    setList(await res.json());
+                    setAuthed(true);
+                } else { alert("密码错误"); }
+            };
+
+            const approve = async (id) => {
+                setLoading(true);
+                const res = await fetch('/api/admin/approve', { 
+                    method: 'POST', 
+                    body: JSON.stringify({ password: pass, ids: [id] }) 
+                });
+                if (res.ok) {
+                    alert("发布成功！");
+                    fetchList();
+                } else { alert("发布失败"); }
+                setLoading(false);
+            };
+
+            if (!authed) {
+                return (
+                    <div className="flex items-center justify-center h-screen">
+                        <div className="bg-white p-8 rounded-2xl shadow-lg w-96 text-center">
+                            <h2 className="text-xl font-bold mb-4">管理员登录</h2>
+                            <input type="password" placeholder="请输入 ADMIN_PASSWORD" 
+                                className="w-full p-2 border rounded-lg mb-4" value={pass} onChange={e => setPass(e.target.value)} />
+                            <button onClick={fetchList} className="w-full py-2 bg-gray-900 text-white rounded-lg">登录</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="max-w-5xl mx-auto p-6">
+                    <h1 className="text-2xl font-bold mb-6">待审核内容 ({list.length})</h1>
+                    <div className="space-y-4">
+                        {list.map(item => (
+                            <div key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h3 className="font-bold text-lg">{item.title} - {item.chapter_title}</h3>
+                                        <p className="text-sm text-gray-500">作者: {item.author} | ID: {item.novel_id}</p>
+                                    </div>
+                                    <button onClick={() => approve(item.id)} disabled={loading}
+                                        className="px-6 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700">
+                                        通过并同步到 GitHub
+                                    </button>
+                                </div>
+                                <div className="bg-gray-50 p-4 rounded-lg text-sm font-mono whitespace-pre-wrap max-h-48 overflow-y-auto">
+                                    {item.content}
+                                </div>
+                            </div>
+                        ))}
+                        {list.length === 0 && <p className="text-center text-gray-500 py-12 text-xl">暂无待审核内容</p>}
+                    </div>
+                </div>
+            );
+        };
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
+  `;
+}
+
+--------
+
+CREATE TABLE IF NOT EXISTS drafts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  novel_id TEXT,
+  title TEXT,
+  author TEXT,
+  description TEXT,
+  chapter_title TEXT,
+  content TEXT,
+  status TEXT DEFAULT 'pending',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

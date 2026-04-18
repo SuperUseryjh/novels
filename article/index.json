@@ -99,7 +99,9 @@
         { "id": "5", "title": "无线电（续）", "path": "5.md" },
         { "id": "6", "title": "图书馆", "path": "6.md"},
         { "id": "7", "title": "茶馆", "path": "7.md" },
-        { "id": "8", "title": "尾声", "path": "8.md" }
+        { "id": "8", "title": "尾声", "path": "8.md" },
+        { "id": "9", "title": "续章", "path": "9.md" },
+        { "id": "10", "title": "续章之二", "path": "10.md" }
       ]
     }
   ]

@@ -88,7 +88,7 @@
     {
       "id": "novel-07",
       "title": "民国十八年",
-      "author": "全班最帅的男人（知错版）和AI",
+      "author": "全班最帅的男人（知错版）和 AI",
       "description": "还有投稿环节 2.0",
       "chapters": [
         { "id": "0", "title": "前言", "path": "0.md" },
@@ -102,6 +102,28 @@
         { "id": "8", "title": "尾声", "path": "8.md" },
         { "id": "9", "title": "续章", "path": "9.md" },
         { "id": "10", "title": "续章之二", "path": "10.md" }
+      ]
+    },
+    {
+      "id": "novel-08",
+      "title": "初三八班·失控",
+      "author": "张灵韵",
+      "description": "暗恋的终极形态",
+      "chapters": [
+        { "id": "0", "title": "楔子", "path": "0.md" },
+        { "id": "1", "title": "第一章", "path": "1.md" },
+        { "id": "2", "title": "第二章", "path": "2.md" },
+        { "id": "3", "title": "尾声", "path": "3.md" }
+      ]
+    },
+    {
+      "id": "novel-09",
+      "title": "犬猿",
+      "author": "张灵韵",
+      "description": "兽人社会的治愈系故事",
+      "chapters": [
+        { "id": "0", "title": "序章", "path": "0.md" },
+        { "id": "1", "title": "第一章", "path": "1.md" }
       ]
     }
   ]

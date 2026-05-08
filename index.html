@@ -638,21 +638,23 @@
 
                             <div className="mt-32 flex flex-col items-center gap-12 pb-40">
                                 <div className="w-12 h-1 bg-gray-200 dark:bg-gray-800 rounded-full"></div>
-                                <div className="w-full flex justify-between gap-6">
-                                    <button 
-                                        disabled={chapterIndex === 0}
-                                        onClick={() => navigateTo({ type: 'reader', params: { novelId, chapterIndex: chapterIndex - 1 } })}
-                                        className="flex-1 flex items-center justify-center gap-3 p-6 rounded-2xl bg-black/5 dark:bg-white/5 hover:bg-rose-500 hover:text-white disabled:opacity-0 transition-all font-bold"
-                                    >
-                                        <Icon name="ArrowLeft" /> 上一章
-                                    </button>
-                                    <button 
-                                        disabled={chapterIndex === novel.chapters.length - 1}
-                                        onClick={() => navigateTo({ type: 'reader', params: { novelId, chapterIndex: chapterIndex + 1 } })}
-                                        className="flex-1 flex items-center justify-center gap-3 p-6 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-2xl hover:bg-rose-600 dark:hover:bg-rose-400 dark:hover:text-white transition-all font-bold shadow-xl"
-                                    >
-                                        下一章 <Icon name="ArrowRight" />
-                                    </button>
+                                <div className="w-full flex gap-6">
+                                    {chapterIndex > 0 && (
+                                        <button 
+                                            onClick={() => navigateTo({ type: 'reader', params: { novelId, chapterIndex: chapterIndex - 1 } })}
+                                            className="flex-1 flex items-center justify-center gap-3 p-6 rounded-2xl bg-black/5 dark:bg-white/5 hover:bg-rose-500 hover:text-white transition-all font-bold"
+                                        >
+                                            <Icon name="ArrowLeft" /> 上一章
+                                        </button>
+                                    )}
+                                    {chapterIndex < novel.chapters.length - 1 && (
+                                        <button 
+                                            onClick={() => navigateTo({ type: 'reader', params: { novelId, chapterIndex: chapterIndex + 1 } })}
+                                            className="flex-1 flex items-center justify-center gap-3 p-6 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-2xl hover:bg-rose-600 dark:hover:bg-rose-400 dark:hover:text-white transition-all font-bold shadow-xl"
+                                        >
+                                            下一章 <Icon name="ArrowRight" />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>

@@ -5,6 +5,7 @@
       "title": "全班的妻子",
       "author": "张灵韵",
       "description": "这啥鬼啊",
+      "tags": ["校园", "猎奇"],
       "chapters": [
         { "id": "1", "title": "第一章", "path": "1.md" },
         { "id": "2", "title": "第二章", "path": "2.md" },
@@ -21,6 +22,7 @@
       "title": "姚津昊的修罗场",
       "author": "张灵韵",
       "description": "何意味",
+      "tags": ["校园", "猎奇"],
       "chapters": [
         { "id": "1", "title": "第一卷：一百三十七张纸条", "path": "1.md" },
         { "id": "2", "title": "第二卷：六个人的心事", "path": "2.md" },
@@ -32,6 +34,7 @@
       "title": "东方绿洲的十四岁",
       "author": "张灵韵",
       "description": "这集神了",
+      "tags": ["校园", "猎奇"],
       "chapters": [
         { "id": "0", "title": "前言", "path": "0.md"},
         { "id": "1", "title": "楔子", "path": "1.md" },
@@ -50,6 +53,7 @@
       "title": "初三八班召唤师学园",
       "author": "张灵韵",
       "description": "666玄幻小说",
+      "tags": ["猎奇", "玄幻"],
       "chapters": [
         { "id": "1", "title": "楔子", "path": "1.md" },
         { "id": "2", "title": "第一章", "path": "2.md" },
@@ -64,6 +68,7 @@
       "title": "永宁纪事",
       "author": "张灵韵",
       "description": "还有第五关",
+      "tags": ["猎奇", "古风"],
       "chapters": [
         { "id": "1", "title": "第一章", "path": "1.md" },
         { "id": "2", "title": "第二章", "path": "2.md" },
@@ -79,6 +84,7 @@
       "title": "作者错了，原谅我吧",
       "author": "全班最帅的男人（知错版）和AI",
       "description": "还有投稿环节",
+      "tags": ["校园"],
       "chapters": [
         { "id": "0", "title": "前言", "path": "0.md"},
         { "id": "1", "title": "余光", "path": "1.md" },
@@ -90,6 +96,7 @@
       "title": "民国十八年",
       "author": "全班最帅的男人（知错版）和 AI",
       "description": "还有投稿环节 2.0",
+      "tags": ["玄幻", "民国风"],
       "chapters": [
         { "id": "0", "title": "前言", "path": "0.md" },
         { "id": "1", "title": "Monkey", "path": "1.md" },
@@ -109,6 +116,7 @@
       "title": "初三八班·失控",
       "author": "张灵韵",
       "description": "暗恋的终极形态",
+      "tags": ["校园", "猎奇"],
       "chapters": [
         { "id": "0", "title": "楔子", "path": "0.md" },
         { "id": "1", "title": "第一章", "path": "1.md" },
@@ -121,6 +129,7 @@
       "title": "犬猿",
       "author": "张灵韵",
       "description": "兽人社会的治愈系故事",
+      "tags": ["猎奇", "福瑞"],
       "chapters": [
         { "id": "0", "title": "序章", "path": "0.md" },
         { "id": "1", "title": "第一章", "path": "1.md" }

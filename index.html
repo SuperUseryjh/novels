@@ -415,6 +415,11 @@
                 const [isReading, setIsReading] = useState(false);
                 const [speechSynth, setSpeechSynth] = useState(null);
                 const [currentUtterance, setCurrentUtterance] = useState(null);
+                const [showSpeechSettings, setShowSpeechSettings] = useState(false);
+                const [speechSettings, setSpeechSettings] = useState({
+                    rate: 1.0,
+                    volume: 1.0
+                });
                 const novel = config?.novels.find(n => n.id === novelId);
                 const chapter = novel?.chapters[chapterIndex];
 
@@ -450,6 +455,16 @@
                     };
                 }, [speechSynth]);
 
+                useEffect(() => {
+                    const handleClickOutside = (e) => {
+                        if (showSpeechSettings && !e.target.closest('.relative')) {
+                            setShowSpeechSettings(false);
+                        }
+                    };
+                    document.addEventListener('mousedown', handleClickOutside);
+                    return () => document.removeEventListener('mousedown', handleClickOutside);
+                }, [showSpeechSettings]);
+
                 const toggleReading = () => {
                     if (!speechSynth || !rawContent) return;
 
@@ -464,9 +479,9 @@
 
                     const utterance = new SpeechSynthesisUtterance(text);
                     utterance.lang = 'zh-CN';
-                    utterance.rate = 1.0;
+                    utterance.rate = speechSettings.rate;
                     utterance.pitch = 1.0;
-                    utterance.volume = 1.0;
+                    utterance.volume = speechSettings.volume;
 
                     utterance.onend = () => {
                         setIsReading(false);
@@ -510,9 +525,16 @@
                                     <Icon name="ChevronLeft" />
                                 </button>
                                 <div className="text-sm font-serif-sc font-bold opacity-40 truncate px-4">{chapter.title}</div>
-                                <div className="flex gap-1">
+                                <div className="flex gap-1 relative">
                                     <button onClick={toggleReading} title={isReading ? "停止朗读" : "大声朗读"} className={`p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors ${isReading ? 'text-rose-500' : ''}`}>
                                         <Icon name={isReading ? "Square" : "Volume2"} />
+                                    </button>
+                                    <button 
+                                        onClick={() => setShowSpeechSettings(!showSpeechSettings)} 
+                                        title="朗读设置" 
+                                        className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors"
+                                    >
+                                        <Icon name="Settings" />
                                     </button>
                                     <button onClick={copyShareLink} title="分享本章" className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors">
                                         <Icon name="Share2" />
@@ -523,6 +545,80 @@
                                     <button onClick={() => setSettings(s => ({ ...s, fontSize: s.fontSize >= 30 ? 16 : s.fontSize + 2 }))} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors">
                                         <Icon name="Type" />
                                     </button>
+
+                                    {showSpeechSettings && (
+                                        <div className="absolute right-0 top-12 w-72 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 z-50 animate-in fade-in slide-in-from-top-2">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                                    <Icon name="Volume2" className="w-4 h-4 text-rose-500" />
+                                                    朗读设置
+                                                </h3>
+                                                <button onClick={() => setShowSpeechSettings(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                                    <Icon name="X" className="w-4 h-4" />
+                                                </button>
+                                            </div>
+
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <label className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                                            <Icon name="Gauge" className="w-3 h-3" />
+                                                            语速
+                                                        </label>
+                                                        <span className="text-xs font-mono font-bold text-rose-500">{speechSettings.rate.toFixed(1)}x</span>
+                                                    </div>
+                                                    <input
+                                                        type="range"
+                                                        min="0.5"
+                                                        max="2.0"
+                                                        step="0.1"
+                                                        value={speechSettings.rate}
+                                                        onChange={(e) => setSpeechSettings(s => ({ ...s, rate: parseFloat(e.target.value) }))}
+                                                        className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-rose-500"
+                                                    />
+                                                    <div className="flex justify-between mt-1 text-[10px] text-gray-400">
+                                                        <span>慢</span>
+                                                        <span>正常</span>
+                                                        <span>快</span>
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <label className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                                            <Icon name="Volume1" className="w-3 h-3" />
+                                                            音量
+                                                        </label>
+                                                        <span className="text-xs font-mono font-bold text-rose-500">{Math.round(speechSettings.volume * 100)}%</span>
+                                                    </div>
+                                                    <input
+                                                        type="range"
+                                                        min="0"
+                                                        max="1"
+                                                        step="0.1"
+                                                        value={speechSettings.volume}
+                                                        onChange={(e) => setSpeechSettings(s => ({ ...s, volume: parseFloat(e.target.value) }))}
+                                                        className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-rose-500"
+                                                    />
+                                                    <div className="flex justify-between mt-1 text-[10px] text-gray-400">
+                                                        <span>静音</span>
+                                                        <span>适中</span>
+                                                        <span>最大</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                                <button
+                                                    onClick={() => setSpeechSettings({ rate: 1.0, volume: 1.0 })}
+                                                    className="w-full py-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    <Icon name="RotateCcw" className="w-3 h-3" />
+                                                    恢复默认设置
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

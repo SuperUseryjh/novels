@@ -94,7 +94,7 @@
     {
       "id": "novel-07",
       "title": "民国十八年",
-      "author": "全班最帅的男人（知错版）和 AI",
+      "author": "全班最帅的男人（知错版）和AI",
       "description": "还有投稿环节 2.0",
       "tags": ["玄幻", "民国风"],
       "chapters": [
@@ -133,6 +133,39 @@
       "chapters": [
         { "id": "0", "title": "序章", "path": "0.md" },
         { "id": "1", "title": "第一章", "path": "1.md" }
+      ]
+    },
+    {
+      "id": "novel-10",
+      "title": "光影交错",
+      "author": "全班最帅的男人（知错版）和AI",
+      "description": "我受不了了这都啥跟啥啊",
+      "tags": ["校园", "猎奇"],
+      "chapters": [
+        { "id": "0", "title": "序章", "path": "0.md" },
+        { "id": "1", "title": "第一章：光影与猿猴", "path": "1.md" },
+        { "id": "2", "title": "第二章：火锅与暗流", "path": "2.md" },
+        { "id": "3", "title": "第三章：风波与默契", "path": "3.md" },
+        { "id": "4", "title": "第四章：赛场与心跳", "path": "4.md" },
+        { "id": "5", "title": "第五章：庆功与试探", "path": "5.md" },
+        { "id": "6", "title": "第六章：光影与未来", "path": "6.md" },
+        { "id": "7", "title": "尾声", "path": "7.md" }
+      ]
+    },
+    {
+      "id": "novel-11",
+      "title": "白茶与无花果",
+      "author": "全班最帅的男人（知错版）和AI",
+      "description": "666连载还在继续",
+      "tags": ["校园", "猎奇"],
+      "chapters": [
+        { "id": "0", "title": "序章", "path": "0.md" },
+        { "id": "1", "title": "第一章 失控的白茶", "path": "1.md" },
+        { "id": "2", "title": "第二章 失效的抑制剂", "path": "2.md" },
+        { "id": "3", "title": "第三章 只有你能碰", "path": "3.md" },
+        { "id": "4", "title": "第四章 失控的占有欲", "path": "4.md" },
+        { "id": "5", "title": "第五章 暴雨中的白茶", "path": "5.md" },
+        { "id": "6", "title": "第六章 尘埃落定", "path": "6.md" }
       ]
     }
   ]
